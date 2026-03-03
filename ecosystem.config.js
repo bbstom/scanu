@@ -22,7 +22,7 @@ module.exports = {
         # 4. 远程数据库: mongodb://用户名:密码@服务器IP:27017/crypto-wallet-explorer?authSource=admin
         
         # 示例（请根据实际情况修改）：
-        MONGODB_URI=mongodb://root:4PlwMaOq6E8FdaYF@localhost:27017/scandb?authSource=admin
+
         
         # Redis（可选，用于缓存）
         REDIS_URL=redis://localhost:6379
