@@ -1,0 +1,83 @@
+===============================================
+  快速部署命令 - 复制粘贴即可使用
+===============================================
+
+【方法 1】一键部署（推荐）
+-----------------------
+cd /www/wwwroot/scanu.cc/scanu
+bash 一键部署.sh
+
+
+【方法 2】手动部署（3条命令）
+-----------------------
+cd /www/wwwroot/scanu.cc/scanu
+rm -rf .next
+NODE_OPTIONS='--max-old-space-size=512' npm run build
+
+
+【方法 3】如果内存还是不够
+-----------------------
+NODE_OPTIONS='--max-old-space-size=256' npm run build
+
+
+【启动应用】
+-----------------------
+# 直接启动
+npm start
+
+# 或使用 PM2（推荐）
+pm2 start npm --name crypto-app -- start
+pm2 save
+pm2 startup
+
+
+【创建 Swap】（如果需要）
+-----------------------
+sudo fallocate -l 2G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+
+
+【检查状态】
+-----------------------
+# 查看内存
+free -h
+
+# 查看进程
+pm2 list
+
+# 查看日志
+pm2 logs crypto-app
+
+# 测试访问
+curl http://localhost:3000
+
+
+【重启应用】
+-----------------------
+pm2 restart crypto-app
+
+
+【停止应用】
+-----------------------
+pm2 stop crypto-app
+
+
+===============================================
+  问题排查
+===============================================
+
+如果构建失败：
+1. 检查内存：free -h
+2. 创建 Swap（见上面命令）
+3. 使用更小内存：NODE_OPTIONS='--max-old-space-size=256' npm run build
+4. 或在本地构建后上传 .next 目录
+
+如果启动失败：
+1. 检查端口：netstat -tlnp | grep 3000
+2. 查看日志：pm2 logs crypto-app
+3. 检查环境变量：cat .env
+
+===============================================
