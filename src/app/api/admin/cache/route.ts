@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRedisClient, deleteCachedData } from "@/lib/redis";
+import { clearSettingsCache } from "@/lib/settings";
 
 // 验证 token
 function verifyToken(request: NextRequest): boolean {
@@ -86,39 +87,45 @@ export async function DELETE(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const pattern = searchParams.get("pattern") || "*"; // 缓存键模式
-    const type = searchParams.get("type"); // 清除类型：key, prefix, all
-
-    const redis = await getRedisClient();
-    if (!redis) {
-      return NextResponse.json(
-        { error: "Redis 未启用" },
-        { status: 400 }
-      );
-    }
+    const type = searchParams.get("type"); // 清除类型：key, prefix, all, settings
 
     let deletedCount = 0;
+    let message = "";
 
-    if (type === "all") {
-      // 清除所有缓存
-      await redis.flushAll();
-      deletedCount = -1; // 表示全部清除
-    } else if (type === "prefix") {
-      // 清除指定前缀的缓存
-      const keys = await redis.keys(`${pattern}*`);
-      for (const key of keys) {
-        await redis.del(key);
-        deletedCount++;
+    // 清除设置缓存
+    if (type === "settings" || type === "all") {
+      await clearSettingsCache();
+      message += "已清除设置缓存。";
+    }
+
+    // 清除 Redis 缓存
+    const redis = await getRedisClient();
+    if (redis && (type === "all" || type === "redis" || type === "prefix" || type === "key")) {
+      if (type === "all" || type === "redis") {
+        // 清除所有 Redis 缓存
+        await redis.flushAll();
+        deletedCount = -1; // 表示全部清除
+        message += "已清除所有 Redis 缓存。";
+      } else if (type === "prefix") {
+        // 清除指定前缀的缓存
+        const keys = await redis.keys(`${pattern}*`);
+        for (const key of keys) {
+          await redis.del(key);
+          deletedCount++;
+        }
+        message += `已清除 ${deletedCount} 个 Redis 缓存。`;
+      } else {
+        // 清除单个缓存键
+        await deleteCachedData(pattern);
+        deletedCount = 1;
+        message += `已清除缓存键: ${pattern}`;
       }
-    } else {
-      // 清除单个缓存键
-      await deleteCachedData(pattern);
-      deletedCount = 1;
     }
 
     return NextResponse.json({
       success: true,
       deletedCount,
-      message: deletedCount === -1 ? "已清除所有缓存" : `已清除 ${deletedCount} 个缓存`,
+      message: message || "缓存清除完成",
     });
   } catch (error) {
     console.error("清除缓存失败:", error);
